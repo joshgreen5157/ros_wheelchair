@@ -4,7 +4,10 @@ RUN apt-get update && apt-get install -y apt-utils build-essential psmisc vim-gt
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 RUN apt-get update && apt-get install -q -y python-catkin-tools
 RUN apt-get update && apt-get install -q -y ros-melodic-hector-gazebo-plugins
+
+FROM python
 RUN python -m pip install --upgrade pip
+COPY . .
 RUN pip install -r requirements.txt
 
 #COPY this is where the catkin_ws file should be copied into the directory as well as any other materials

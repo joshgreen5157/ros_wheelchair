@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+
+import multiprocessing as mp
+from os import write
+from re import X
+import subprocess as sp
+import time
+import move_base
+import rospy
+import serial
+from geometry_msgs.msg import  PoseStamped,Twist
+from std_msgs.msg import String
+from actionlib_msgs.msg import GoalStatusArray, GoalID
+from move_base_msgs.msg import MoveBaseAction
+import actionlib
+
+def setupComPort(comPort):
+    serialPort = serial.Serial(port = comPort, baudrate = 9600, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE)
+    return serialPort
+
+COM = setupComPort("/dev/ttyACM0")
+serialCounter = 0
+cancelBool = False
+
+def clearMap():
+    print("Clearing MAP")
+    clear_publisher = rospy.Publisher("syscommand", String, queue_size=5)
+    msg = "reset"
+    clear_publisher.publish(msg)
+
+def writeCommand(comPort, strvar):
+    comPort.write(str.encode(strvar + '*'))    
+
+def setGoal(msg):
+    goal_publisher = rospy.Publisher("move_base_simple/goal", PoseStamped, queue_size=5)
+    goal = PoseStamped()
+    if msg.pose != goal.pose:
+        writeCommand(COM, 'a')
+
+    goal.header.seq = 1
+    goal.header.frame_id = "map"
+    goal.header.stamp = rospy.Time.now()
+    goal.pose = msg.pose
+    goal_publisher.publish(goal)    
+    # time.sleep(2)
+
+def translate_commands(target):
+    global COM
+    lineA = int(target.linear.x)
+    lineB = int(target.angular.z)
+    
+    if lineA> 0:
+        lineA = lineA+170
+    elif lineA< 0:
+        lineA = lineA+100
+    elif lineA == 0:
+        lineA = 130
+    if lineB> 0:
+        lineB = lineB+170
+    elif lineB< 0:
+        lineB = lineB+100
+    elif lineB == 0:
+        lineB = lineB+130
+    lineA = 'A' + str(lineA)
+    lineB = 'B' + str(lineB)
+    print('x = ',target.linear.x,'a = ', lineA)
+    print('y = ',target.angular.z,'b = ', lineB)
+    writeCommand(COM, lineA)
+    writeCommand(COM, lineB)
+
+def rVizProcess():
+    sp.run('roslaunch navigation hector_map.launch', shell = True, check = True, stdout = sp.PIPE, stderr = sp.STDOUT)
+
+def callback(poses):
+    global COM
+    global serialCounter
+    translate_commands(poses)
+    if serialCounter == 25:
+        COM.flushInput()
+        COM.flushOutput()
+        serialCounter = 0
+    serialCounter = serialCounter+1
+
+def callback2(target):
+    global COM
+    global cancelBool 
+    cancelBool = True
+    # clearMap()
+    # time.sleep(5)
+    writeCommand(COM,'a')
+
+def callback3(status):
+    global COM
+    global cancelBool
+    if status.status_list != []:
+        # print(status.status_list[0].status)
+        if status.status_list[0].status == 3 and cancelBool == True:
+            print('DONE')
+            writeCommand(COM, 'DONE')
+            move_base = actionlib.SimpleActionClient('/servicebot/move_base', MoveBaseAction)
+            move_base.cancel_all_goals()
+            cancelBool = False
+            # clearTarget = rospy.Publisher('move_base/cancel',GoalID,queue_size=1)
+            # clear = GoalID()
+            # clearTarget.publish(clear)
+
+def listener():
+    rospy.init_node('listener',anonymous=True)
+    rospy.Subscriber('/move_base_simple/goal', PoseStamped, callback2)
+    rospy.Subscriber('/cmd_vel', Twist, callback)
+    rospy.Subscriber('/move_base/status', GoalStatusArray, callback3)
+    rospy.spin()
+  
+def main():
+    p = mp.Process(target=rVizProcess)
+    p.start()
+    time.sleep(15)
+
+    l = mp.Process(target=listener)
+    l.start()
+    print('Ready for target location')
+
+if __name__ == '__main__':
+    print('sp_START')
+    main()
