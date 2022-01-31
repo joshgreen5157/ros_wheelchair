@@ -1,7 +1,6 @@
 matplotlib
 numpy
 scipy
-jupyter
 seaborn
 pandas
 bokeh

@@ -1,16 +1,14 @@
 FROM osrf/ros:melodic-desktop-full
 
+COPY requirements.txt /opt/app/requirements.txt
+COPY catkin_ws/ /catkin_ws
 RUN apt-get update && apt-get install -y apt-utils build-essential psmisc vim-gtk
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 RUN apt-get update && apt-get install -q -y python-catkin-tools
 RUN apt-get update && apt-get install -q -y ros-melodic-hector-gazebo-plugins
 
-FROM python
-RUN python -m pip install --upgrade pip
-COPY . .
-RUN pip install -r requirements.txt
+RUN apt-get install -y python-pip
+# RUN source /catkin_ws/devel/setup.bash
+RUN pip install -r /opt/app/requirements.txt
 
-#COPY this is where the catkin_ws file should be copied into the directory as well as any other materials
-#EXPOSE any appropriate ports to communicate to wheelchair need to be exposed here
-#ENTRYPOINT the file within the ROS system that needs to be activated
-CMD ["bash"] #not sure if this is necessary for our purposes
+
