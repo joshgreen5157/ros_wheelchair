@@ -5,3 +5,4 @@ seaborn
 pandas
 bokeh
 rosbag_pandas
+serial
