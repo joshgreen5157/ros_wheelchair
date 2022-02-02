@@ -3,7 +3,7 @@
 Container_Name=$1
 
 if [ "$Container_Name" == "" ]; then
-  Container_name="4800_wheelchair"
+  Container_name="autowheelchair"
 fi
 
 echo "Building docker container $Container_Name"
