@@ -3,12 +3,13 @@
 
 //Pins
 const int ENA = 8; //Define enable pin for Megamoto 1
-const int LMF = 6; //Define pin for Left Motor Forward
-const int LMR = 5; //Define pin for Left Motor Reverse
+const int LMF = 5; //Define pin for Left Motor Forward
+const int LMR = 6; //Define pin for Left Motor Reverse
 const int RMF = 9; //Define pin for Right Motor Forward
 const int RMR = 10; //Define pin for Right Motor Reverse
-const int JOYX = 0; const int JOYY = 1;
-//const int BRAKED = 13; //brake Input
+const int JOYX = 0; const int JOYY = 1; //analog 0 and analog 1
+const int BRAKED = 13; //brake Input
+const int JOYBTN = 3;
 
 //Range variables
 int xCal, yCal;
@@ -20,7 +21,7 @@ const int calibrationlevel = 10;
 //Operational Functions
 void brake(); void coast(); void motorLeft(int speed=0); void motorRight(int speed=0);
 void writeMotors(int left, int right); void serialRead(); 
-void readJoystick(); void calibrateJoystick();
+void readJoystick(); void calibrateJoystick(); void joystickButton();
 
 //timing variables
 unsigned long timer; unsigned long timer2; unsigned long cmdTimer = 0; unsigned long joyTimer = 0;
@@ -32,7 +33,7 @@ const int autoDelay = 500; const int joyDelay = 500;
 bool stateChanged = true;
 int state = 0; //0: brake, 1: manual, 2: joystick, 3: autonomous;
 bool joyReadyBool = false; bool autonomousModeBool = false;
-bool joyModeBool = false;
+bool joyModeBool = false; int joyBtnState = 0; int lastJoyBtnState = 0;
 
 void setup() {
   Serial.begin(9600); // start Serial communication
@@ -43,7 +44,8 @@ void setup() {
   pinMode(RMR, OUTPUT); 
   pinMode(JOYX, INPUT);
   pinMode(JOYY, INPUT);
-//  pinMode(BRAKED, INPUT);
+  pinMode(BRAKED, INPUT);
+  pinMode(JOYBTN, INPUT);
   calibrateJoystick();
 }
 
@@ -142,6 +144,7 @@ void autonomousMode() {
 void checkState() {
   int tempState;
   serialRead();
+  joystickButton();
   bool BRAKED=false;
   if (BRAKED== true) {
     tempState = 0;
@@ -161,6 +164,20 @@ void checkState() {
     Serial.println((String)"***State Changed***    " + state + state + state + state );
     
   }
+}
+
+void joystickButton() {
+  joyBtnState = digitalRead(JOYBTN);
+
+  if (joyBtnState != lastJoyBtnState) {
+    if (joyBtnState == HIGH) {
+      joyModeBool = true;
+    }
+    else {
+      joyModeBool = false;
+    }
+  }
+  lastJoyBtnState = joyBtnState;
 }
 
 void serialRead() {
