@@ -3,12 +3,12 @@
 
 //Pins
 const int ENA = 8; //Define enable pin for Megamoto 1
-const int LMF = 5; //Define pin for Left Motor Forward
-const int LMR = 6; //Define pin for Left Motor Reverse
-const int RMF = 9; //Define pin for Right Motor Forward
-const int RMR = 10; //Define pin for Right Motor Reverse
+const int LMF = 9; //Define pin for Left Motor Forward
+const int LMR = 10; //Define pin for Left Motor Reverse
+const int RMF = 5; //Define pin for Right Motor Forward
+const int RMR = 6; //Define pin for Right Motor Reverse
 const int JOYX = 0; const int JOYY = 1; //analog 0 and analog 1
-const int BRAKED = 13; //brake Input
+const int BRAKED = 4; //brake Input
 const int JOYBTN = 3;
 
 //Range variables
@@ -24,7 +24,8 @@ void writeMotors(int left, int right); void serialRead();
 void readJoystick(); void calibrateJoystick(); void joystickButton();
 
 //timing variables
-unsigned long timer; unsigned long timer2; unsigned long cmdTimer = 0; unsigned long joyTimer = 0;
+unsigned long timer, timer2, autoTimer; unsigned long cmdTimer = 0; 
+unsigned long joyTimer = 0; unsigned long autonomousTimeOut = 3000;
 const int cmdDelay1 = 250;  const int cmdDelay2 = 25;
 const int brakeDelay = 100; 
 const int autoDelay = 500; const int joyDelay = 500; 
@@ -145,8 +146,7 @@ void checkState() {
   int tempState;
   serialRead();
   joystickButton();
-  bool BRAKED=false;
-  if (BRAKED== true) {
+  if (digitalRead(BRAKED) == HIGH) {
     tempState = 0;
   }
   else if (joyReadyBool == true && joyModeBool == true) {
@@ -168,23 +168,26 @@ void checkState() {
 
 void joystickButton() {
   joyBtnState = digitalRead(JOYBTN);
-
   if (joyBtnState != lastJoyBtnState) {
+    Serial.println("Inside joybtn state change");
     if (joyBtnState == HIGH) {
-      joyModeBool = true;
-    }
-    else {
-      joyModeBool = false;
+      joyModeBool = !joyModeBool;
     }
   }
-  lastJoyBtnState = joyBtnState;
+   lastJoyBtnState = joyBtnState;
 }
 
 void serialRead() {
-  if (Serial.available() > 0) {
+  if (autonomousModeBool) {
+    Serial.println(autoTimer - millis());
+    if (autoTimer - millis() > autonomousTimeOut) {
+      autonomousModeBool = false;
+    }
+   }
+  else if (Serial.available() > 0) {
     autonomousModeBool = true; 
-  }
-}
+    autoTimer = millis();
+}}
 
 void loop() {
   timer = millis();
@@ -194,8 +197,10 @@ void loop() {
   }
   if (timer - cmdDelay1 > cmdTimer) {
     switch (state) {
+      case 0: //brake state
+      brake();
       case 1: //manual state
-      Serial.println("Manual");
+//      Serial.println("Manual");
       brake();
       break;
       case 2: //joystick state
