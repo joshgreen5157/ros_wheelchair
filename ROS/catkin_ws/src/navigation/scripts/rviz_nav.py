@@ -116,13 +116,12 @@ def targetReached(status):
 
 # Check the camera output for Wheelchair Freeze command
 def checkCamera(pose):
-    global freeze
     global COM
     if os.path.getsize("/home/max/shared.pkl") > 0: 
         fp = open("/home/max/shared.pkl", "rb")
-        freeze = pickle.load(fp)
-        if freeze == "True":
-            print('checkCamera ', freeze)
+        target_index = pickle.load(fp)
+        if target_index == -1:
+            print("No viable space")
             stopWheelchair()
 
 # Send Stop command to wheelchair
