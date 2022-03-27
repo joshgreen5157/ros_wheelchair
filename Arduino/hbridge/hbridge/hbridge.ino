@@ -138,7 +138,13 @@ void readJoystick() {
 }}
 
 void autonomousMode() {
-  Serial.read();
+  char cmdStart = NULL;
+  while cmdStart != '%' {
+    cmdStart = Serial.read()}
+}
+  char input[4];
+  Serial.readBytes(input, 4);
+  writeMotors(input[0], input[2])
 }
 
 
@@ -161,8 +167,7 @@ void checkState() {
   if (tempState != state) {
     stateChanged = true;
     state = tempState;
-    Serial.println((String)"***State Changed***    " + state + state + state + state );
-    
+    Serial.println((String)"***State Changed***    ");
   }
 }
 
@@ -179,8 +184,7 @@ void joystickButton() {
 
 void serialRead() {
   if (autonomousModeBool) {
-    Serial.println(autoTimer - millis());
-    if (autoTimer - millis() > autonomousTimeOut) {
+    if (millis() - autoTimer > autonomousTimeOut) {
       autonomousModeBool = false;
     }
    }

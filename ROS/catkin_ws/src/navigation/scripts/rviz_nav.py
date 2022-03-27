@@ -53,27 +53,31 @@ def setGoal(msg):
 # Translate the desired command and assign it the proper numeric value
 def translateCommands(target):
     global COM
-    lineA = float(target.linear.x)
-    lineB = float(target.angular.z)
-    
-    if lineA> 0:
-        lineA = lineA+200
-    elif lineA< 0:
-        lineA = lineA+100
-    elif lineA == 0:
-        lineA = 135
-    if lineB> 0:
-        lineB = lineB+160
-    elif lineB< 0:
-        lineB = lineB+110
-    elif lineB == 0:
-        lineB = lineB+135
-    lineA = 'A' + str(int(lineA))
-    lineB = 'B' + str(int(lineB))
+    lineA = float(target.linear.x)     ## linear.x range (0.0 to 0.5)
+    lineB = float(target.angular.z)    ## angular.z range (-1.0 to 1.0)
+    ## lineA 0.5 = 100 sent to motor. 200* lineA
+    speed = 200*lineA ##0.1 = 20, 0.2 = 40, 0.3 = 60, 0.4 = 80, 0.5 = 100
+    ## Assume positive theta = left turn, Negative theta is right turn
+    differential = lineB/10 ## reducing to a maximum of 90% of motor speed value
+    if lineB < 0: #left turn
+        differential = -differential ##turn differential positive
+        leftMotor = speed*(differential)  ##(not sharp turns!!!)
+        rightMotor = speed*(1+differential)
+    elif lineB > 0: #right turn
+        rightMotor = speed*(differential)  ##(not sharp turns!!!)
+        leftMotor = speed*(1+differential)
+    else: # lineB == 0 no turn, drive straight
+        rightMotor = speed
+        leftmotor = speed
+
+    ## target_index is set to point around near objects
+    ## need a way to rectify these two movements
+
+
+
     print('x = ',target.linear.x,'a = ', lineA)
     print('y = ',target.angular.z,'b = ', lineB)
-    writeCommand(COM, lineA)
-    writeCommand(COM, lineB)
+    writeCommand(COM, "%" + leftMotor + "&" + rightMotor)
 
 # Format the desired command and send it over the open COM port
 def writeCommand(comPort, strvar):
