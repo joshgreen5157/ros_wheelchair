@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import numpy.ma as ma
 from itertools import groupby
 import cv2
 import scipy.misc
 import signal
-import pyfreenect2
 from numpy import testing, uint16
 import pickle
 from functions import *
@@ -82,23 +82,15 @@ while 1:
         ir = frames["ir"]
         depth = frames["depth"]
         registration.apply(color, depth, undistorted, registered,bigdepth=bigdepth,color_depth_map=color_depth_map)
-
         classIds, confs, bbox = net.detect(cv2.cvtColor(color.asarray(),cv2.COLOR_RGBA2RGB),confThreshold = thres)
-        print(classIds)
-        print(confs)
-        print(bbox)
+
         try:			
             for classId, confidence, box in zip(classIds,confs,bbox):
                 cv2.rectangle(color.asarray(), box, color = (0,255,0), thickness=3)
                 cv2.putText(color.asarray(), classNames[classId-1].upper(), (box[0]+10,box[1]+30), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
                 cv2.putText(color.asarray(), str(round(confidence*100,3)) + "%", (box[0]+10,box[1]+70), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
 
-            flag120=[1, 1, 1, 1]
-            flag140=[1, 1, 1, 1]
-            f14=0
-            f12=0
-            f10=0
-            f8=0
+
 
     # #get kinect input__________________________________________________________________________
             # dst = pretty_depth(cv2.resize(depth.asarray(),(int(512), int(428))))
@@ -133,8 +125,10 @@ while 1:
 
 
 ####### New Navigational Development with Kinect Depth Measurements #####
-        #find minimum value in rows 250-300 
-        min_range = np.argmin(dst[250:300,0:-1])
+        #find minimum value in rows 250-300
+        masked_depth = np.ma.masked_equal(depth, 0, copy=False)
+        min_range = np.min(masked_depth[250:300,3:-1])*.001
+        print("min_range: " ,min_range, "m")
 
         ## take min value and define range of of concern. 1 meter, 2 meter, 4 meter
         if min_range < 1:
@@ -157,18 +151,23 @@ while 1:
         ## ppm * .82 = chair number of pixels necessary for space
         chair_pixels = .82 * ppm
 
-        ## evaluate entire width for new boolean array of yay/nay
-        depth_vision = []
-        for j in range(int(cols)):
-            for i in range(int(rows)):
-                path_obstructed = False
-                if i > 250 and i < 300:
-                    if dst([i,j]) < range_of_concern:
-                        path_obstructed = True
-            depth_vision[j] = path_obstructed
-        
-        ##depth vision is a 1x512 boolean list. need to identify which is best place to go
 
+        # print("Range of Concern: " , range_of_concern, "m")
+        # print("Range Arc Length: " , range_arc_length, "m")
+        # print("Pixels per meter: ", ppm)
+        ## evaluate entire width for new boolean array of yay/nay
+        depth_vision = np.zeros((1,512))
+        for j in range(int(cols)):
+            path_obstructed = 0
+            for i in range(int(rows)):
+                if i > 250 and i < 300:
+                    if masked_depth[i,j]*0.001 < range_of_concern:
+                        path_obstructed = 1         
+            depth_vision[0,j] = path_obstructed
+        
+        # with open("/home/josh/Documents/depth.csv","w") as f:
+        #     np.savetxt(f,depth_vision)
+        ##depth vision is a 1x512 boolean list. need to identify which is best place to go
         start = 0
         runs = []
         for key, run in groupby(depth_vision):
@@ -183,8 +182,11 @@ while 1:
             ##find center position by using simple average
             target_index = (result[0] + result[1])/2
         
-        with open("/home/max/shared.pkl","wb") as f:
+        with open("/home/josh/Documents/share.pkl","wb") as f:
             pickle.dump(target_index, f) 
+        print("target index: ", target_index)
+        target_offset = target_index - 256 * ppm
+        print("Target offset: ", target_offset)
 
 
 ######End of New Navigational Development  #######
