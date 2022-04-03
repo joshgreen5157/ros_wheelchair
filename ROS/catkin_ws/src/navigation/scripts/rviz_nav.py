@@ -5,6 +5,7 @@ import time
 import rospy
 import serial
 import pickle
+import json
 import actionlib
 import subprocess as sp
 import multiprocessing as mp
@@ -27,7 +28,8 @@ def setupComPort(comPort):
 COM = setupComPort("/dev/ttyACM0")
 serialCounter = 0
 cancelBool = False
-freeze = "False"
+obs_range = 0
+target_index = 256
 
 # Clear the map on rViz (NOT CURRENTLY IN USE, IF USED ALLOW TIME FOR MAP TO REPOPULATE)
 def clearMap():
@@ -55,25 +57,29 @@ def translateCommands(target):
     global COM
     lineA = float(target.linear.x)     ## linear.x range (0.0 to 0.5)
     lineB = float(target.angular.z)    ## angular.z range (-1.0 to 1.0)
-    ## lineA 0.5 = 100 sent to motor. 200* lineA
-    speed = 200*lineA ##0.1 = 20, 0.2 = 40, 0.3 = 60, 0.4 = 80, 0.5 = 100
+    speed = 20*lineA ##0.1 = 20, 0.2 = 40, 0.3 = 60, 0.4 = 80, 0.5 = 100
     ## Assume positive theta = left turn, Negative theta is right turn
-    differential = lineB/10 ## reducing to a maximum of 90% of motor speed value
-    if lineB < 0: #left turn
-        differential = -differential ##turn differential positive
-        leftMotor = speed*(differential)  ##(not sharp turns!!!)
-        rightMotor = speed*(1+differential)
-    elif lineB > 0: #right turn
-        rightMotor = speed*(differential)  ##(not sharp turns!!!)
-        leftMotor = speed*(1+differential)
-    else: # lineB == 0 no turn, drive straight
-        rightMotor = speed
-        leftmotor = speed
+    slam_turn = 1 / lineB
+    # if lineB < 0: #right
+    # elif lineB > 0: #left turn
+    # else: # lineB == 0 no turn
 
-    ## target_index is set to point around near objects
-    ## need a way to rectify these two movements
+    ## kinect differential
+    if obs_range == 0:
+        speed = speed * 4
+        kinect_turn_percentage = 1
+    else
+        speed = speed * obs_range
+        #256 = do nothing so subtract 256 and then eval
+        kinect_index = 256 - target_index
+        kinect_turn_percentage = kinect_index / 256
 
+    leftMotor = speed + (speed*slam_turn)
+    rightMotor = speed - (speed*slam_turn)
 
+    leftMotor = leftMotor + (speed*kinect_turn_percentage)
+    rightMotor = rightMotor - (speed*kinect_turn_percentage)    
+    
 
     print('x = ',target.linear.x,'a = ', lineA)
     print('y = ',target.angular.z,'b = ', lineB)
@@ -122,17 +128,19 @@ def targetReached(status):
 def checkCamera(pose):
     global COM
     if os.path.getsize("/home/max/shared.pkl") > 0: 
-        fp = open("/home/max/shared.pkl", "rb")
-        target_index = pickle.load(fp)
+        fp = open("/home/max/shared.pkl", "r")
+        kinect_dict = json.load("/home/max/shared.pkl")
+        target_index = kinect_dict["target"]
+        obs_range = kinect_dict["range"]
         if target_index == -1:
             print("No viable space")
             stopWheelchair()
+        
 
 # Send Stop command to wheelchair
 def stopWheelchair():
     global COM
-    writeCommand(COM, 'A135')
-    writeCommand(COM, 'B135')
+    writeCommand(COM, "%0&0")
 
 # Looping listener for ROS Topics
 def listener():
