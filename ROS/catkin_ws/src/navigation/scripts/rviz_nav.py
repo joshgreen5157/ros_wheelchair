@@ -127,9 +127,9 @@ def targetReached(status):
 # Check the camera output for Wheelchair Freeze command
 def checkCamera(pose):
     global COM
-    if os.path.getsize("/home/max/shared.pkl") > 0: 
-        fp = open("/home/max/shared.pkl", "r")
-        kinect_dict = json.load("/home/max/shared.pkl")
+    if os.path.getsize("/home/max/shared.json") > 0: 
+        fp = open("/home/max/shared.json", "r")
+        kinect_dict = json.load("/home/max/shared.json")
         target_index = kinect_dict["target"]
         obs_range = kinect_dict["range"]
         if target_index == -1:

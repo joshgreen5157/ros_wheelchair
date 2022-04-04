@@ -7,7 +7,7 @@ import cv2
 import scipy.misc
 import signal
 from numpy import testing, uint16
-import pickle
+import json
 from functions import *
 from pylibfreenect2 import Freenect2, SyncMultiFrameListener
 from pylibfreenect2 import FrameType, Registration, Frame
@@ -74,6 +74,7 @@ net.setInputSize(320,320)
 net.setInputScale(1.0 / 127.5)
 net.setInputMean((127.5,127.5,127.5))
 net.setInputSwapRB(True)
+kinect_dict = {"target" : 256, "range_of_concern" : 0}
 
 while 1:
     if listener.hasNewFrame():
@@ -182,8 +183,10 @@ while 1:
             ##find center position by using simple average
             target_index = (result[0] + result[1])/2
         
-        with open("/home/josh/Documents/share.pkl","wb") as f:
-            pickle.dump(target_index, f) 
+        with open("/home/josh/Documents/share.json","w") as f:
+            kinect_dict["target"] = target_index
+            kinect_dict["range"] = range_of_concdern
+            json.dump(kinect_dict, f)
         print("target index: ", target_index)
         target_offset = target_index - 256 * ppm
         print("Target offset: ", target_offset)
