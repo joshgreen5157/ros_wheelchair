@@ -157,14 +157,14 @@ while 1:
         # print("Range Arc Length: " , range_arc_length, "m")
         # print("Pixels per meter: ", ppm)
         ## evaluate entire width for new boolean array of yay/nay
-        depth_vision = np.zeros((1,512))
+        depth_vision = []
         for j in range(int(cols)):
             path_obstructed = 0
             for i in range(int(rows)):
                 if i > 250 and i < 300:
                     if masked_depth[i,j]*0.001 < range_of_concern:
                         path_obstructed = 1         
-            depth_vision[0,j] = path_obstructed
+            depth_vision.append(path_obstructed)
         
         # with open("/home/josh/Documents/depth.csv","w") as f:
         #     np.savetxt(f,depth_vision)
@@ -176,9 +176,9 @@ while 1:
             runs.append((start, start + length -1))
             start += length
         result = max(runs, key=lambda x: x[1] - x[0])
+        print(result)
         if result[1] - result[0] < chair_pixels:
             target_index = -1
-            pass
         else:
             ##find center position by using simple average
             target_index = (result[0] + result[1])/2
