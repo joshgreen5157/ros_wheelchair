@@ -7,7 +7,7 @@ const int LMR = 5; //Define pin for Left Motor Reverse
 const int RMF = 10; //Define pin for Right Motor Forward
 const int RMR = 9; //Define pin for Right Motor Reverse
 const int JOYX = A0; const int JOYY = A1; //analog 0 and analog 1
-const int BRAKED = 4; //brake Input
+//const int BRAKED = 4; //brake Input
 const int JOYPWR = 3;
 
 //Range variables
@@ -45,7 +45,7 @@ void setup() {
   pinMode(RMR, OUTPUT); 
   pinMode(JOYX, INPUT);
   pinMode(JOYY, INPUT);
-  pinMode(BRAKED, INPUT);
+//  pinMode(BRAKED, INPUT);
   pinMode(JOYPWR, INPUT);
 }
 
@@ -75,13 +75,13 @@ void calibrateJoystick() {
 //wheels braking
 void brake(){
 //  digitalWrite(ENA, LOW);
-  Serial.println("Brake command");
+//  Serial.println("Brake command");
   motorLeft();
   motorRight();
 }
 
 //should be able to turn these into one function
-void motorLeft(int speed=0){
+void motorLeft(int speed){
   if (speed == 0) {
       analogWrite(LMR, 0);
       analogWrite(LMF, 0);
@@ -96,7 +96,7 @@ void motorLeft(int speed=0){
     }
   };
 
-void motorRight(int speed=0){
+void motorRight(int speed){
   if (speed == 0) {
     analogWrite(RMR, 0);
     analogWrite(RMF, 0);
@@ -113,6 +113,7 @@ void motorRight(int speed=0){
 
 void writeMotors(int left, int right){
   digitalWrite(ENA, HIGH);
+  Serial.println("Writing to motors: ");
   motorLeft(left/ motorReduction);
   motorRight(right / motorReduction);
 }
@@ -139,12 +140,15 @@ void readJoystick() {
 }}
 
 void autonomousMode() {
-  char cmdStart = NULL;
-  while (cmdStart != '%') {
-    cmdStart = Serial.read();}
-  char input[4];
-  Serial.readBytes(input, 4);
-  writeMotors(input[0], input[2]);
+  if (Serial.available() > 0) {
+    int LM; int RM;
+    String cmd = Serial.readStringUntil('*');
+    Serial.read();
+    sscanf( cmd.c_str(), "%%%d&%d", &LM, &RM );
+    Serial.println(LM);
+    Serial.println(RM);
+    writeMotors(LM, RM);
+  }
 }
 
 
@@ -152,9 +156,9 @@ void checkState() {
   int tempState;
   serialRead();
   joystickPwr();
- if (digitalRead(BRAKED) == HIGH) {
-   tempState = 0;
- }
+// if (digitalRead(BRAKED) == HIGH) {
+//   tempState = 0;
+// }
   if (autonomousModeBool) {
     tempState = 3;
   }
@@ -215,11 +219,12 @@ void loop() {
       break;
       case 3: //autonomous state
       Serial.println("Autonomous");
+      autonomousMode();
       break;
       default:
       //brake state
       brake();
-      Serial.println("Braked");
+//      Serial.println("Braked");
       break;
     }
     if (stateChanged) {
