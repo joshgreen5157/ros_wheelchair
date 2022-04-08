@@ -7,7 +7,7 @@ const int LMR = 5; //Define pin for Left Motor Reverse
 const int RMF = 10; //Define pin for Right Motor Forward
 const int RMR = 9; //Define pin for Right Motor Reverse
 const int JOYX = A0; const int JOYY = A1; //analog 0 and analog 1
-//const int BRAKED = 4; //brake Input
+const int BRAKED = 4; //brake Input
 const int JOYPWR = 3;
 
 //Range variables
@@ -45,7 +45,7 @@ void setup() {
   pinMode(RMR, OUTPUT); 
   pinMode(JOYX, INPUT);
   pinMode(JOYY, INPUT);
-//  pinMode(BRAKED, INPUT);
+  pinMode(BRAKED, INPUT);
   pinMode(JOYPWR, INPUT);
 }
 
