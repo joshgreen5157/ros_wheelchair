@@ -134,7 +134,9 @@ while 1:
         ## take min value and define range of of concern. 1 meter, 2 meter, 4 meter
         if min_range < 1:
             range_of_concern = 1
-        elif min_range >= 1 and min_range < 2:
+        elif min_range >=1 and min_range < 1.5:
+            range_of_concern = 1.5
+        elif min_range >= 1.5 and min_range < 2:
             range_of_concern = 2
         elif min_range >=2 and min_range < 3:
             range_of_concern = 3
@@ -157,14 +159,15 @@ while 1:
         # print("Range Arc Length: " , range_arc_length, "m")
         # print("Pixels per meter: ", ppm)
         ## evaluate entire width for new boolean array of yay/nay
-        depth_vision = []
-        for j in range(int(cols)):
-            path_obstructed = 0
-            for i in range(int(rows)):
-                if i > 250 and i < 300:
-                    if masked_depth[i,j]*0.001 < range_of_concern:
-                        path_obstructed = 1         
-            depth_vision.append(path_obstructed)
+        depth_vision = list(np.sum((masked_depth[0:-1,250:300] < range_of_concern),axis=1, dtype=bool))
+
+        # for j in range(int(cols)):
+        #     path_obstructed = 0
+        #     for i in range(int(rows)):
+        #         if i > 250 and i < 300:
+        #             if masked_depth[i,j]*0.001 < range_of_concern:
+        #                 path_obstructed = 1         
+        #     depth_vision.append(path_obstructed)
         
         # with open("/home/josh/Documents/depth.csv","w") as f:
         #     np.savetxt(f,depth_vision)
@@ -185,7 +188,7 @@ while 1:
         
         with open("/home/josh/Documents/share.json","w") as f:
             kinect_dict["target"] = target_index
-            kinect_dict["range"] = range_of_concdern
+            kinect_dict["range"] = range_of_concern
             json.dump(kinect_dict, f)
         print("target index: ", target_index)
         target_offset = target_index - 256 * ppm
