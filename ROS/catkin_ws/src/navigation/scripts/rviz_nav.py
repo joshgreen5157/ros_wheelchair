@@ -55,34 +55,37 @@ def setGoal(msg):
 # Translate the desired command and assign it the proper numeric value
 def translateCommands(target):
     global COM
-    lineA = float(target.linear.x)     ## linear.x range (0.0 to 0.5)
-    lineB = float(target.angular.z)    ## angular.z range (-1.0 to 1.0)
-    speed = 20*lineA ##0.1 = 20, 0.2 = 40, 0.3 = 60, 0.4 = 80, 0.5 = 100
+    x = float(target.linear.x)     ## linear.x range (0.0 to 0.5)
+    theta = float(target.angular.z)    ## angular.z range (-1.0 to 1.0)
+    speed = 200*x ##0.1 = 20, 0.2 = 40, 0.3 = 60, 0.4 = 80, 0.5 = 100
     ## Assume positive theta = left turn, Negative theta is right turn
-    slam_turn = 1 / lineB
-    # if lineB < 0: #right
-    # elif lineB > 0: #left turn
-    # else: # lineB == 0 no turn
+    
+    
+    #ROS MOTOR VALUES
+    if theta < 0:
+        leftMotor = speed
+        rightMotor = speed - theta*50
+    elif theta > 0:
+        leftMotor = speed - theta*50
+        rightMotor = speed
+    else:
+        leftMotor = speed
+        rightMotor = speed
 
     ## kinect differential
-    if obs_range == 0:
-        speed = speed * 4
-        kinect_turn_percentage = 1
-    else
-        speed = speed * obs_range
+    if obs_range == 0 or kinect_index == 256:
+        kinect_turn_percentage = 0
+    else:
+        speed = speed / obs_range
         #256 = do nothing so subtract 256 and then eval
         kinect_index = 256 - target_index
         kinect_turn_percentage = kinect_index / 256
 
-    leftMotor = speed + (speed*slam_turn)
-    rightMotor = speed - (speed*slam_turn)
 
     leftMotor = leftMotor + (speed*kinect_turn_percentage)
     rightMotor = rightMotor - (speed*kinect_turn_percentage)    
     
 
-    print('x = ',target.linear.x,'a = ', lineA)
-    print('y = ',target.angular.z,'b = ', lineB)
     writeCommand(COM, "%" + leftMotor + "&" + rightMotor)
 
 # Format the desired command and send it over the open COM port
@@ -94,7 +97,7 @@ def navCommandsReceived(poses):
     global COM
     global freeze
     global serialCounter
-    if freeze == "False":
+    if freeze != -1:
         translateCommands(poses)
         if serialCounter == 25:
             COM.flushInput()
@@ -107,10 +110,6 @@ def newGoalReceived(target):
     global COM
     global cancelBool 
     cancelBool = True
-    writeCommand(COM,'a')
-    time.sleep(.5)
-    writeCommand(COM,'a')
-
 
 # When Target location is reach send a DONE command and clear the goal from Rviz
 def targetReached(status):
@@ -127,14 +126,15 @@ def targetReached(status):
 # Check the camera output for Wheelchair Freeze command
 def checkCamera(pose):
     global COM
-    if os.path.getsize("/home/max/shared.json") > 0: 
-        fp = open("/home/max/shared.json", "r")
-        kinect_dict = json.load("/home/max/shared.json")
+    global target_index
+    global obs_range 
+    with open("/home/max/shared.json", "r") as fp:
+        kinect_dict = json.load(fp)
         target_index = kinect_dict["target"]
         obs_range = kinect_dict["range"]
-        if target_index == -1:
-            print("No viable space")
-            stopWheelchair()
+    if target_index == -1:
+        print("No viable space")
+        stopWheelchair()
         
 
 # Send Stop command to wheelchair
