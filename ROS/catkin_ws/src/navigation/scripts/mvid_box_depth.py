@@ -109,11 +109,13 @@ while 1:
             leftSides = []
             rightSides = []
             boxIndex = None
+            distance_list = []
             for i in indices:
                 box = bbox[i]
                 x,y,w,h = box[0], box[1], box[2], box[3]
                 cv2.rectangle(color.asarray(), (x,y), (x+w,y+h), color = (0,255,0), thickness=3)
                 object_distance = np.average(depth[x:x+w,y:y+h])*0.001 #convert to meters
+                distance_list.append(object_distance)
                 leftSides.append(x)
                 rightSides.append(x+w)
                 if object_distance < range_of_concern:
@@ -135,12 +137,7 @@ while 1:
         counter = 0
 
 
-####### New Navigational Development with Kinect Depth Measurements #####
-        #find minimum value in rows 250-300
-        # masked_depth = np.ma.masked_equal(depth, 0, copy=False)
-        # min_range = np.min(masked_depth[250:300,3:-1])*.001
-        # print("min_range: " ,min_range, "m")
-        
+####### New Navigational Development with Kinect Depth Measurements #####        
         ##Kinect arc length is 1.22 * radius. Wheelchair arc length is constant .82
         range_arc_length = 1.22 * range_of_concern
         ##chair arc can fit 1.53 * range of concern 
@@ -149,8 +146,8 @@ while 1:
         ## ppm * .82 = chair number of pixels necessary for space
         chair_pixels = .82 * ppm
 
-        depth_vision = []
-            
+        depth_vision = list(np.sum(depth[0:-1,250:300] < range_of_concern,axis=1, dtype=bool))
+          
         # with open("/home/josh/Documents/depth.csv","w") as f:
         #     np.savetxt(f,depth_vision)
         ##depth vision is a 1x512 boolean list. need to identify which is best place to go

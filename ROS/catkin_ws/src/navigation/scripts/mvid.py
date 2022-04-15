@@ -91,7 +91,7 @@ while 1:
                 cv2.putText(color.asarray(), classNames[classId-1].upper(), (box[0]+10,box[1]+30), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
                 cv2.putText(color.asarray(), str(round(confidence*100,3)) + "%", (box[0]+10,box[1]+70), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
 
-    # #get kinect input__________________________________________________________________________
+            # #get kinect input__________________________________________________________________________
             # dst = pretty_depth(cv2.resize(depth.asarray(),(int(512), int(428))))
             depth = (depth.asarray()).astype(uint16)
             depth = depth.reshape(424,512)
@@ -110,7 +110,7 @@ while 1:
          
             cv2.imshow("RGB", cv2.resize(color.asarray(),(int(800), int(600))))
  
-    # #rectangular border (improved edge detection + closed contours)___________________________ 
+            # #rectangular border (improved edge detection + closed contours)___________________________ 
             cv2.rectangle(dst,(0,0),(1920,1080),(40,100,0),2)
            
     # #defined points approach #                 
