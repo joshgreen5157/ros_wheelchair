@@ -91,8 +91,6 @@ while 1:
                 cv2.putText(color.asarray(), classNames[classId-1].upper(), (box[0]+10,box[1]+30), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
                 cv2.putText(color.asarray(), str(round(confidence*100,3)) + "%", (box[0]+10,box[1]+70), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
 
-
-
     # #get kinect input__________________________________________________________________________
             # dst = pretty_depth(cv2.resize(depth.asarray(),(int(512), int(428))))
             depth = (depth.asarray()).astype(uint16)
@@ -145,7 +143,6 @@ while 1:
         else:
             range_of_concern = 8
 
-        
         ##Kinect arc length is 1.22 * radius. Wheelchair arc length is constant .82
         range_arc_length = 1.22 * range_of_concern
         ##chair arc can fit 1.53 * range of concern 
@@ -154,24 +151,12 @@ while 1:
         ## ppm * .82 = chair number of pixels necessary for space
         chair_pixels = .82 * ppm
 
-
         # print("Range of Concern: " , range_of_concern, "m")
         # print("Range Arc Length: " , range_arc_length, "m")
         # print("Pixels per meter: ", ppm)
         ## evaluate entire width for new boolean array of yay/nay
         depth_vision = list(np.sum((masked_depth[0:-1,250:300] < range_of_concern),axis=1, dtype=bool))
 
-        # for j in range(int(cols)):
-        #     path_obstructed = 0
-        #     for i in range(int(rows)):
-        #         if i > 250 and i < 300:
-        #             if masked_depth[i,j]*0.001 < range_of_concern:
-        #                 path_obstructed = 1         
-        #     depth_vision.append(path_obstructed)
-        
-        # with open("/home/josh/Documents/depth.csv","w") as f:
-        #     np.savetxt(f,depth_vision)
-        ##depth vision is a 1x512 boolean list. need to identify which is best place to go
         start = 0
         runs = []
         for key, run in groupby(depth_vision):
@@ -194,21 +179,6 @@ while 1:
         target_offset = target_index - 256 * ppm
         print("Target offset: ", target_offset)
 
-
-######End of New Navigational Development  #######
-        # for i in range(int(rows)):
-        #     for j in range(int(cols)):
-        #         if i>250 and i < 300:
-        #             if j>150 and j< 400:
-        #                 if dst[i,j]>100:
-        #                     if ((dst[i,j]<=2300)):
-        #                         counter = counter+1
-        #                         if counter> 300:
-        #                             print('distance = ',dst[i,j], 'row = ', i, 'column = ', j)
-        #                             shared = str("True")
-        #                             break
-        # with open("/home/max/shared.pkl","wb") as f:
-        #     pickle.dump(shared, f)   
 
 #imshow outputs______________________________________________________________________ not working  
         cv2.imshow('Video', dst)
