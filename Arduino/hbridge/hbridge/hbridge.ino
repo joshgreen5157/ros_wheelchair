@@ -2,27 +2,25 @@
 
 //Pins
 const int ENA = 8; //Define enable pin for Megamoto 1
-const int LMF = 6; //Define pin for Left Motor Forward
-const int LMR = 5; //Define pin for Left Motor Reverse
-const int RMF = 10; //Define pin for Right Motor Forward
-const int RMR = 9; //Define pin for Right Motor Reverse
+const int LMF = 9; //Define pin for Left Motor Forward
+const int LMR = 10; //Define pin for Left Motor Reverse
+const int RMF = 5; //Define pin for Right Motor Forward
+const int RMR = 6; //Define pin for Right Motor Reverse
 const int JOYX = A0; const int JOYY = A1; //analog 0 and analog 1
 const int BRAKED = 4; //brake Input
-const int JOYPWR = 3;
-const int JOYRELAY = 11;
 
 //Range variables
 int xCal, yCal;
-const int turnReduction = 4;
+const int turnReduction = 8;
 const int motorRange = 100;
 const int joyPlay = 100;
 const int calibrationlevel = 10;
 const int motorReduction = 3;
 
 //Operational Functions
-void brake(); void coast(); void motorLeft(int speed = 0); void motorRight(int speed = 0);
+void brake(); void manual(); void motorLeft(int speed = 0); void motorRight(int speed = 0);
 void writeMotors(int left, int right); void serialRead();
-void readJoystick(); void calibrateJoystick(); void joystickPwr();
+void readJoystick(); void calibrateJoystick();
 
 //timing variables
 unsigned long timer, timer2, autoTimer; unsigned long cmdTimer = 0;
@@ -35,7 +33,6 @@ const int autoDelay = 50; const int joyDelay = 50;
 bool stateChanged = true;
 int state = 0; //0: brake, 1: manual, 2: joystick, 3: autonomous;
 bool joyReadyBool = false; bool autonomousModeBool = false;
-bool joyModeBool = false; int joyPwrState = 0;
 
 void setup() {
   Serial.begin(9600); // start Serial communication
@@ -47,9 +44,7 @@ void setup() {
   pinMode(JOYX, INPUT);
   pinMode(JOYY, INPUT);
   pinMode(BRAKED, INPUT);
-  pinMode(JOYPWR, INPUT);
-  pinMode(JOYRELAY, OUTPUT);
-  digitalWrite(JOYRELAY, HIGH);
+  calibrateJoystick();
 }
 
 void calibrateJoystick() {
@@ -73,26 +68,31 @@ void calibrateJoystick() {
   }
   xCal = xAvg;
   yCal = yAvg;
+  joyReadyBool = HIGH;
 }
 
 //wheels braking
 void brake() {
   digitalWrite(ENA, LOW);
+  Serial.readStringUntil('*');
   motorLeft();
   motorRight();
 }
 
 //should be able to turn these into one function
 void motorLeft(int speed) {
+  
   if (speed == 0) {
     analogWrite(LMR, 0);
     analogWrite(LMF, 0);
   }
   else if (speed < 0 ) {
+    
     analogWrite(LMR, -speed);
     analogWrite(LMF, 0);
   }
   else if (speed > 0) {
+    
     analogWrite(LMR, 0);
     analogWrite(LMF, speed);
   }
@@ -100,6 +100,7 @@ void motorLeft(int speed) {
 
 void motorRight(int speed) {
   if (speed == 0) {
+    Serial.println(speed);
     analogWrite(RMR, 0);
     analogWrite(RMF, 0);
   }
@@ -115,10 +116,8 @@ void motorRight(int speed) {
 
 void writeMotors(int left, int right) {
   digitalWrite(ENA, HIGH);
-  if (left < 255 && right < 255) {
-    motorLeft(left);
-    motorRight(right);
-  }
+  motorLeft(left);
+  motorRight(right);
 }
 
 void readJoystick() {
@@ -127,6 +126,8 @@ void readJoystick() {
     int xValue; int yValue;
     xValue = analogRead(JOYX) - xCal;
     yValue = analogRead(JOYY) - yCal;
+    Serial.println(xValue);
+    Serial.println(yValue);
     if (yValue / joyPlay == 0) {
       yValue =  0;
     }
@@ -137,10 +138,10 @@ void readJoystick() {
       yValue = yValue / turnReduction;
     }
     //     Serial.println((String)"XXXXXX: " + xValue + " || YYYYYY " + yValue);
-    int leftPower = (yValue + xValue) / motorReduction; 
-    int rightPower = (yValue - xValue) / motorReduction;
+    int leftPower = (yValue + xValue/motorReduction)/2; 
+    int rightPower = (yValue - xValue/ motorReduction)/2;
     //    Serial.println((String)"Left motor: " + leftPower + " || Right motor: " + rightPower);
-    writeMotors(leftPower, rightPower);
+    writeMotors(-1*leftPower, -1*rightPower);
   }
 };
 
@@ -158,7 +159,6 @@ void autonomousMode() {
 void checkState() {
   int tempState;
   serialRead();
-  joystickPwr();
   if (digitalRead(BRAKED)) {
     tempState = 0;
   }
@@ -175,22 +175,7 @@ void checkState() {
     stateChanged = true;
     state = tempState;
     Serial.println((String)"***State Changed***    " + state);
-    Serial.flush();
   };
-};
-
-void joystickPwr() {
-  joyPwrState = digitalRead(JOYPWR);
-  if (joyPwrState != joyReadyBool) {
-    if (joyPwrState == HIGH) {
-      calibrateJoystick();
-      joyReadyBool = HIGH;
-    }
-    else //joyPwrState == LOW
-    {
-      joyReadyBool = LOW;
-    }
-  }
 };
 
 void serialRead() {
