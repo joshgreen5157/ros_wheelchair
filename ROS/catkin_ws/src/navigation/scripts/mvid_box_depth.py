@@ -30,12 +30,6 @@ def pretty_depth(depth):
     depth = depth.astype(np.uint8)
     return depth
 
-# def setupComPort(comPort):
-#     serialPort = serial.Serial(port = comPort, baudrate = 9600, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE)
-#     return serialPort
-
-# COM = setupComPort("/dev/ttyACM0")
-
 signal.signal(signal.SIGINT, sigint_handler)
 
 fn = Freenect2()
@@ -110,11 +104,13 @@ while 1:
             rightSides = []
             boxIndex = None
             distance_list = []
+            masked_depth = np.ma.masked_equal(depth, 0, copy=False)
             for i in indices:
                 box = bbox[i]
                 x,y,w,h = box[0], box[1], box[2], box[3]
                 cv2.rectangle(color.asarray(), (x,y), (x+w,y+h), color = (0,255,0), thickness=3)
-                object_distance = np.average(depth[x:x+w,y:y+h])*0.001 #convert to meters
+                max_range = np.max(masked_depth[x:x+w, y+y+h])
+                object_distance = np.average(depth[x:x+w,y:y+h] < max_range/2)*0.001 #convert to meters
                 distance_list.append(object_distance)
                 leftSides.append(x)
                 rightSides.append(x+w)
@@ -145,8 +141,11 @@ while 1:
         ppm = cols / range_arc_length
         ## ppm * .82 = chair number of pixels necessary for space
         chair_pixels = .82 * ppm
-
-        depth_vision = list(np.sum(depth[0:-1,250:300] < range_of_concern,axis=1, dtype=bool))
+        depth_vision = [0] * 512
+        for i in len(distance_list):
+                depth_vision[leftSides[i]:rightSides[i]] += 1
+        print(depth_vision)
+        # depth_vision = list(np.sum(depth[0:-1,250:300] < range_of_concern,axis=1, dtype=bool))
           
         # with open("/home/josh/Documents/depth.csv","w") as f:
         #     np.savetxt(f,depth_vision)
