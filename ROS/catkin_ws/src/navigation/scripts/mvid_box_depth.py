@@ -91,7 +91,9 @@ while 1:
                 cv2.putText(color.asarray(), classNames[classId-1].upper(), (box[0]+10,box[1]+30), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
                 cv2.putText(color.asarray(), str(round(confidence*100,3)) + "%", (box[0]+10,box[1]+70), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
 
-            # #get kinect input__________________________________________________________________________
+
+
+    # #get kinect input__________________________________________________________________________
             # dst = pretty_depth(cv2.resize(depth.asarray(),(int(512), int(428))))
             depth = (depth.asarray()).astype(uint16)
             depth = depth.reshape(424,512)
@@ -103,14 +105,26 @@ while 1:
             confs = list(np.array(confs).reshape(1,-1)[0])
             confs = list(map(float,confs))
             indices = cv2.dnn.NMSBoxes(bbox,confs,thres,nms_threshold)
+            range_of_concern = 8
+            leftSides = []
+            rightSides = []
+            boxIndex = None
+            distance_list = []
             for i in indices:
                 box = bbox[i]
                 x,y,w,h = box[0], box[1], box[2], box[3]
                 cv2.rectangle(color.asarray(), (x,y), (x+w,y+h), color = (0,255,0), thickness=3)
-         
+                object_distance = np.average(depth[x:x+w,y:y+h])*0.001 #convert to meters
+                distance_list.append(object_distance)
+                leftSides.append(x)
+                rightSides.append(x+w)
+                if object_distance < range_of_concern:
+                    range_of_concern = object_distance
+                    boxIndex = i
+
             cv2.imshow("RGB", cv2.resize(color.asarray(),(int(800), int(600))))
  
-            # #rectangular border (improved edge detection + closed contours)___________________________ 
+    # #rectangular border (improved edge detection + closed contours)___________________________ 
             cv2.rectangle(dst,(0,0),(1920,1080),(40,100,0),2)
            
     # #defined points approach #                 
@@ -123,26 +137,7 @@ while 1:
         counter = 0
 
 
-####### New Navigational Development with Kinect Depth Measurements #####
-        #find minimum value in rows 250-300
-        masked_depth = np.ma.masked_equal(depth, 0, copy=False)
-        min_range = np.min(masked_depth[250:300,3:-1])*.001
-        print("min_range: " ,min_range, "m")
-
-        ## take min value and define range of of concern. 1 meter, 2 meter, 4 meter
-        if min_range < 1:
-            range_of_concern = 1
-        elif min_range >=1 and min_range < 1.5:
-            range_of_concern = 1.5
-        elif min_range >= 1.5 and min_range < 2:
-            range_of_concern = 2
-        elif min_range >=2 and min_range < 3:
-            range_of_concern = 3
-        elif min_range >=3 and min_range < 4:
-            range_of_concern = 4
-        else:
-            range_of_concern = 8
-
+####### New Navigational Development with Kinect Depth Measurements #####        
         ##Kinect arc length is 1.22 * radius. Wheelchair arc length is constant .82
         range_arc_length = 1.22 * range_of_concern
         ##chair arc can fit 1.53 * range of concern 
@@ -151,12 +146,11 @@ while 1:
         ## ppm * .82 = chair number of pixels necessary for space
         chair_pixels = .82 * ppm
 
-        # print("Range of Concern: " , range_of_concern, "m")
-        # print("Range Arc Length: " , range_arc_length, "m")
-        # print("Pixels per meter: ", ppm)
-        ## evaluate entire width for new boolean array of yay/nay
-        depth_vision = list(np.sum((masked_depth[0:-1,250:300] < range_of_concern),axis=1, dtype=bool))
-
+        depth_vision = list(np.sum(depth[0:-1,250:300] < range_of_concern,axis=1, dtype=bool))
+          
+        # with open("/home/josh/Documents/depth.csv","w") as f:
+        #     np.savetxt(f,depth_vision)
+        ##depth vision is a 1x512 boolean list. need to identify which is best place to go
         start = 0
         runs = []
         for key, run in groupby(depth_vision):
@@ -180,7 +174,6 @@ while 1:
         print("Target offset: ", target_offset)
 
 
-#imshow outputs______________________________________________________________________ not working  
         cv2.imshow('Video', dst)
 
         listener.release(frames)
