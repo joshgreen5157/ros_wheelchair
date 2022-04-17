@@ -6,6 +6,7 @@ from itertools import groupby
 import cv2
 import scipy.misc
 import signal
+import time
 from numpy import testing, uint16
 import json
 from functions import *
@@ -19,22 +20,48 @@ except:
     from pylibfreenect2 import CpuPacketPipeline
     pipeline = CpuPacketPipeline()
 
+
 def sigint_handler(signum, frame):
     print("Got SIGINT, shutting down...")
     quit()
 
+
 def nothing(x):
     pass
+
 
 def pretty_depth(depth):
     depth = depth.astype(np.uint8)
     return depth
 
-# def setupComPort(comPort):
-#     serialPort = serial.Serial(port = comPort, baudrate = 9600, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE)
-#     return serialPort
+def get_longest_false_run(list):
+    start = 0
+    runs = []
+    for key, run in groupby(list):
+        length = sum(1 for _ in run)
+        runs.append((start, start + length -1))
+        start += length
+    result = max(runs, key=lambda x: x[1] - x[0])
+    print(result)
+    if result[1] - result[0] < chair_pixels:
+        target_index = -1
+    else:
+        ##find center position by using simple average
+        target_index = (result[0] + result[1])/2
+    return target_index
+    
+def get_arc_and_ppm(range_of_concern):
+    range_arc_length = 1.22 * range_of_concern
+    ##chair arc can fit 1.53 * range of concern 
+    ## Pixels per meter (ppm) = 512/arc length in meters
+    ppm = 512 / range_arc_length
+    ## ppm * .82 = chair number of pixels necessary for space
+    chair_pixels = .82 * ppm
+    return range_arc_length, ppm, chair_pixels
 
-# COM = setupComPort("/dev/ttyACM0")
+
+def get_boolean_with_np(arr):
+    return list(np.sum((arr[0:-1,250:300] < range_of_concern),axis=1, dtype=bool))
 
 signal.signal(signal.SIGINT, sigint_handler)
 
@@ -91,26 +118,58 @@ while 1:
                 cv2.putText(color.asarray(), classNames[classId-1].upper(), (box[0]+10,box[1]+30), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
                 cv2.putText(color.asarray(), str(round(confidence*100,3)) + "%", (box[0]+10,box[1]+70), cv2.FONT_HERSHEY_COMPLEX, 2, (0,255,0), 2)
 
-            # #get kinect input__________________________________________________________________________
+    # #get kinect input__________________________________________________________________________
             # dst = pretty_depth(cv2.resize(depth.asarray(),(int(512), int(428))))
             depth = (depth.asarray()).astype(uint16)
             depth = depth.reshape(424,512)
             dst = depth
-            cv2.imshow("Depthvtr56432", dst)
+            # cv2.imshow("Depthvtr56432", dst)
             
             classIds, confs, bbox = net.detect(cv2.cvtColor(color.asarray(), cv2.COLOR_RGB2BGR), confThreshold = thres)
             bbox = list(bbox)
             confs = list(np.array(confs).reshape(1,-1)[0])
             confs = list(map(float,confs))
             indices = cv2.dnn.NMSBoxes(bbox,confs,thres,nms_threshold)
+            masked_depth = np.ma.masked_equal(depth, 0, copy=False)
+            print('indices', indices )
+            print('bbox', bbox )
             for i in indices:
-                box = bbox[i]
-                x,y,w,h = box[0], box[1], box[2], box[3]
-                cv2.rectangle(color.asarray(), (x,y), (x+w,y+h), color = (0,255,0), thickness=3)
-         
-            cv2.imshow("RGB", cv2.resize(color.asarray(),(int(800), int(600))))
+                try:
+                    box = bbox[i]
+                    x,y,w,h = box[0], box[1], box[2], box[3]
+                    cv2.rectangle(color.asarray(), (x,y), (x+w,y+h), color = (0,255,0), thickness=3)
+                except IndexError as e:
+                    print("IndexError: ", e)
+                # except ValueError as e:
+                #     print("ValueError: ", e)
+            new_img = color.asarray()
+            try:
+                x1  = bbox[0][0]
+                x2  = bbox[0][0] + bbox[0][2]
+                y1  = bbox[0][1]
+                y2  = bbox[0][1] + bbox[0][3]
+                print(x1,x2,y1,y2)
+                new_img[:y1,:] = 0
+                new_img[y2:,:] = 0
+                new_img[:,:x1] = 0
+                new_img[:,x2:] = 0
+                print("sliced rgb")
+                xd1 = x1/4
+                xd2 = x2/4
+                yd1 = y1/4
+                yd2 = y2/4
+                new_img_depth = depth
+                new_img_depth[:y1,:] = 0
+                new_img_depth[y2:,:] = 0
+                new_img_depth[:,:x1] = 0
+                new_img_depth[:,x2:] = 0
+                print("Finished slicing depth image")
+            except Exception as e:
+                print("Exception: ", e)
+            cv2.imshow("masked_depth", cv2.resize(new_img, (int(800), int(600))))
+            cv2.imshow("depth", new_img_depth)
  
-            # #rectangular border (improved edge detection + closed contours)___________________________ 
+    # #rectangular border (improved edge detection + closed contours)___________________________ 
             cv2.rectangle(dst,(0,0),(1920,1080),(40,100,0),2)
            
     # #defined points approach #                 
@@ -121,73 +180,37 @@ while 1:
         except AttributeError as e:
             print("Error no Object:", e)
         counter = 0
+        range_of_concern = 6
+        range_arc_length, ppm, chair_pixels = get_arc_and_ppm(range_of_concern)
+        depth_vision = [0]*512
 
-
-####### New Navigational Development with Kinect Depth Measurements #####
-        #find minimum value in rows 250-300
-        masked_depth = np.ma.masked_equal(depth, 0, copy=False)
-        min_range = np.min(masked_depth[250:300,3:-1])*.001
-        print("min_range: " ,min_range, "m")
-
-        ## take min value and define range of of concern. 1 meter, 2 meter, 4 meter
-        if min_range < 1:
-            range_of_concern = 1
-        elif min_range >=1 and min_range < 1.5:
-            range_of_concern = 1.5
-        elif min_range >= 1.5 and min_range < 2:
-            range_of_concern = 2
-        elif min_range >=2 and min_range < 3:
-            range_of_concern = 3
-        elif min_range >=3 and min_range < 4:
-            range_of_concern = 4
-        else:
-            range_of_concern = 8
-
-        ##Kinect arc length is 1.22 * radius. Wheelchair arc length is constant .82
-        range_arc_length = 1.22 * range_of_concern
-        ##chair arc can fit 1.53 * range of concern 
-        ## Pixels per meter (ppm) = 512/arc length in meters
-        ppm = cols / range_arc_length
-        ## ppm * .82 = chair number of pixels necessary for space
-        chair_pixels = .82 * ppm
-
-        # print("Range of Concern: " , range_of_concern, "m")
-        # print("Range Arc Length: " , range_arc_length, "m")
-        # print("Pixels per meter: ", ppm)
-        ## evaluate entire width for new boolean array of yay/nay
-        depth_vision = list(np.sum((masked_depth[0:-1,250:300] < range_of_concern),axis=1, dtype=bool))
-
-        start = 0
-        runs = []
-        for key, run in groupby(depth_vision):
-            length = sum(1 for _ in run)
-            runs.append((start, start + length -1))
-            start += length
-        result = max(runs, key=lambda x: x[1] - x[0])
-        print(result)
-        if result[1] - result[0] < chair_pixels:
-            target_index = -1
-        else:
-            ##find center position by using simple average
-            target_index = (result[0] + result[1])/2
+        depth_vision = get_boolean_with_np(new_img_depth)
+        # print(depth_vision)
+        # with open("/home/josh/Documents/depth.csv","w") as f:
+        #     np.savetxt(f,depth_vision)
+        ##depth vision is a 1x512 boolean list. need to identify which is best place to go
         
+        target_index = get_longest_false_run(depth_vision)
+
+
         with open("/home/josh/Documents/share.json","w") as f:
             kinect_dict["target"] = target_index
             kinect_dict["range"] = range_of_concern
             json.dump(kinect_dict, f)
+        print("Range of Concern: ", range_of_concern)
         print("target index: ", target_index)
-        print("ppm: ", ppm)
-        target_offset = 256 - target_index
+        target_offset = (target_index - 256)/ ppm
         print("Target offset: ", target_offset)
 
 
-#imshow outputs______________________________________________________________________ not working  
-        cv2.imshow('Video', dst)
+        # cv2.imshow('Video', dst)
 
         listener.release(frames)
             
         key = cv2.waitKey(delay=1)
         if key == ord('q'):
             break
+
+    # time.sleep(2)
         
 device.stop()
