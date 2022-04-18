@@ -162,7 +162,7 @@ while 1:
             kinect_dict["range"] = range_of_concern
             json.dump(kinect_dict, f)
         print("target index: ", target_index)
-        target_offset = target_index - 960 * ppm
+        target_offset = target_index - 960 / ppm
         print("Target offset: ", target_offset)
 
 
