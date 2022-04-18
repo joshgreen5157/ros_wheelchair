@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
+from cv2 import COLOR_GRAY2BGR
 import numpy as np
 import numpy.ma as ma
 from itertools import groupby
 import cv2
 import scipy.misc
+import time
 import signal
-from numpy import testing, uint16
+from numpy import float32, float64, int16, testing, uint16
 import json
 from functions import *
 from pylibfreenect2 import Freenect2, SyncMultiFrameListener
@@ -82,6 +84,7 @@ while 1:
         color = frames["color"]
         ir = frames["ir"]
         depth = frames["depth"]
+        
         registration.apply(color, depth, undistorted, registered,bigdepth=bigdepth,color_depth_map=color_depth_map)
         classIds, confs, bbox = net.detect(cv2.cvtColor(color.asarray(),cv2.COLOR_RGBA2RGB),confThreshold = thres)
 
@@ -96,7 +99,7 @@ while 1:
             depth = (depth.asarray()).astype(uint16)
             depth = depth.reshape(424,512)
             dst = depth
-            cv2.imshow("Depthvtr56432", dst)
+            # cv2.imshow("Depthvtr56432", dst)
             
             classIds, confs, bbox = net.detect(cv2.cvtColor(color.asarray(), cv2.COLOR_RGB2BGR), confThreshold = thres)
             bbox = list(bbox)
@@ -125,23 +128,27 @@ while 1:
 
 ####### New Navigational Development with Kinect Depth Measurements #####
         #find minimum value in rows 250-300
-        masked_depth = np.ma.masked_equal(depth, 0, copy=False)
-        min_range = np.min(masked_depth[250:300,3:-1])*.001
-        print("min_range: " ,min_range, "m")
+        depth = np.fliplr(depth)
+        masked_depth = np.ma.masked_equal(depth[250:300, 0:510], 0, copy=False)
+        with open("/home/josh/Documents/depth.csv","w") as f:
+            np.savetxt(f,masked_depth)
+        print(masked_depth.mean(axis=0))
+        range_of_concern = min(filter(None, masked_depth.mean(axis=0)))*.001
+        print("min_range: " ,range_of_concern, "m")
 
         ## take min value and define range of of concern. 1 meter, 2 meter, 4 meter
-        if min_range < 1:
-            range_of_concern = 1
-        elif min_range >=1 and min_range < 1.5:
-            range_of_concern = 1.5
-        elif min_range >= 1.5 and min_range < 2:
-            range_of_concern = 2
-        elif min_range >=2 and min_range < 3:
-            range_of_concern = 3
-        elif min_range >=3 and min_range < 4:
-            range_of_concern = 4
-        else:
-            range_of_concern = 8
+        # if min_range < 1:
+        #     range_of_concern = 1
+        # elif min_range >=1 and min_range < 1.5:
+        #     range_of_concern = 1.5
+        # elif min_range >= 1.5 and min_range < 2:
+        #     range_of_concern = 2
+        # elif min_range >=2 and min_range < 3:
+        #     range_of_concern = 3
+        # elif min_range >=3 and min_range < 4:
+        #     range_of_concern = 4
+        # else:
+        #     range_of_concern = 8
 
         ##Kinect arc length is 1.22 * radius. Wheelchair arc length is constant .82
         range_arc_length = 1.22 * range_of_concern
@@ -155,7 +162,13 @@ while 1:
         # print("Range Arc Length: " , range_arc_length, "m")
         # print("Pixels per meter: ", ppm)
         ## evaluate entire width for new boolean array of yay/nay
-        depth_vision = list(np.sum((masked_depth[0:-1,250:300] < range_of_concern),axis=1, dtype=bool))
+        depth_vision = []
+        i = 0
+        n = 25
+        while i < 512-n:
+            obstructed = bool(np.sum((depth[i:i+n,250:300] < range_of_concern)))
+            depth_vision.append(obstructed)
+            i = i+1
 
         start = 0
         runs = []
@@ -169,21 +182,27 @@ while 1:
             target_index = -1
         else:
             ##find center position by using simple average
-            target_index = (result[0] + result[1])/2
+            target_index = int((result[0] + result[1])/2)
         
         with open("/home/josh/Documents/share.json","w") as f:
             kinect_dict["target"] = target_index
             kinect_dict["range"] = range_of_concern
             json.dump(kinect_dict, f)
+        print("Range of Concern :", range_of_concern)
         print("target index: ", target_index)
         print("ppm: ", ppm)
         target_offset = 256 - target_index
-        print("Target offset: ", target_offset)
+        print("Target offset: ", target_offset)   
+        # if range_of_concern > 1:
+        #     time.sleep(1)   
+    
 
-
-#imshow outputs______________________________________________________________________ not working  
-        cv2.imshow('Video', dst)
-
+        depth[250:300,target_index-1:target_index+1] = 32168
+        cv2.imshow('Video', depth)
+        # if target_index != -1:
+        #     cv2.line(img=color_depth_map, pt1=(target_index, 250), pt2=(target_index, 300), color=(255,0,0), thickness=15)
+      
+      
         listener.release(frames)
             
         key = cv2.waitKey(delay=1)
