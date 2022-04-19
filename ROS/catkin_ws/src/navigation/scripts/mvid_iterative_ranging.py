@@ -3,6 +3,7 @@
 import numpy as np
 import numpy.ma as ma
 from itertools import groupby
+from operator import itemgetter
 import cv2
 import scipy.misc
 import signal
@@ -34,20 +35,19 @@ def pretty_depth(depth):
     depth = depth.astype(np.uint8)
     return depth
 
-def get_longest_false_run(list):
-    start = 0
-    runs = []
-    for key, run in groupby(list):
-        length = sum(1 for _ in run)
-        runs.append((start, start + length -1))
-        start += length
-    result = max(runs, key=lambda x: x[1] - x[0])
-    if result[1] - result[0] < chair_pixels:
-        target_index = -1
-    else:
-        ##find center position by using simple average
-        target_index = (result[0] + result[1])/2
-    return target_index
+def longest_false_run(lst):
+    """Finds the longest false run in a list of boolean"""
+
+    # find False runs only
+    groups = [[i for i, _ in group] for key, group in groupby(enumerate(lst), key=itemgetter(1)) if not key]
+
+    # get the one of maximum length
+    group = max(groups, key=len, default=[-1, -1])
+
+    start, end = group[0], group[-1]
+
+    return start, end
+
     
 def get_arc_and_ppm(range_of_concern):
     range_arc_length = 1.22 * range_of_concern
@@ -60,7 +60,9 @@ def get_arc_and_ppm(range_of_concern):
 
 
 def get_boolean_with_np(arr):
-    return list(np.sum((arr[0:-1,250:300] < range_of_concern),axis=1, dtype=bool))
+    with open("/home/josh/Documents/arr.csv","w") as f:
+        np.savetxt(f,arr)
+    return list(np.sum((arr[150:200,0:-1] < range_of_concern),axis=0, dtype=bool))
 
 def get_closest(depthData):
     global range_of_concern
@@ -73,7 +75,7 @@ def get_closest(depthData):
             break
         distance = distance - 400
     # print("Done with image")
-    with open("/home/josh/Documents/depth.csv","w") as f:
+    with open("/home/josh/Documents/objectMask.csv","w") as f:
         np.savetxt(f,objectMask)
     print("Distance at finish: ", distance)
     range_of_concern = distance*0.001
@@ -140,14 +142,18 @@ while 1:
             depth = (depth.asarray()).astype(uint16)
             depth = depth.reshape(424,512)
             dst = depth
+
+            with open("/home/josh/Documents/depth.csv","w") as f:
+                np.savetxt(f,depth, fmt="%d", delimiter=",")
             
             classIds, confs, bbox = net.detect(cv2.cvtColor(color.asarray(), cv2.COLOR_RGB2BGR), confThreshold = thres)
             bbox = list(bbox)
             confs = list(np.array(confs).reshape(1,-1)[0])
             confs = list(map(float,confs))
+            depth = depth[100:-1, 0:-1]
             new_depth_img = np.fliplr(depth)
-            with open("/home/josh/Documents/depth.csv","w") as f:
-                np.savetxt(f,new_depth_img)
+            with open("/home/josh/Documents/new_depth_image.csv","w") as f:
+                np.savetxt(f,new_depth_img, fmt="%d", delimiter=",")
             get_closest(new_depth_img)
 
             cv2.imshow("color image", cv2.resize(color.asarray(), (int(800), int(600))))
@@ -170,7 +176,17 @@ while 1:
         # print(depth_vision)
         ##depth vision is a 1x512 boolean list. need to identify which is best place to go
         
-        target_index = int(get_longest_false_run(depth_vision))
+        start, end = longest_false_run(depth_vision)
+        
+        with open("/home/josh/Documents/depth_vision.csv","w") as f:
+            np.savetxt(f,depth_vision, fmt="%d", delimiter=",")
+            f.write(str(start)+ ',' + str(end))
+
+        if end - start < chair_pixels:
+            target_index = -1
+        else:
+            ##find center position by using simple average
+            target_index = int((start+end) / 2)
 
         with open("/home/josh/Documents/share.json","w") as f:
             kinect_dict["target"] = target_index
@@ -180,9 +196,13 @@ while 1:
         print("target index: ", target_index)
         target_offset = (target_index - 256)/ ppm
         print("Target offset: ", target_offset)
-        new_depth_img[0:-1,target_index-1:target_index+1] = 32168
+        if target_index > 0:
+            # new_depth_img[250:300, start-1::start+1] = 32168
+            new_depth_img[150:200,target_index-1:target_index+1] = 32168
+            # new_depth_img[250:300, end-1::end+1] = 32168
 
         cv2.imshow("new_depth_image", new_depth_img)
+        # cv2.line(new_depth_img, (target_index, 250), (target_index, 300),color=(255,255,255), thickness=6)
         # cv2.imshow('Video', dst)
 
         listener.release(frames)

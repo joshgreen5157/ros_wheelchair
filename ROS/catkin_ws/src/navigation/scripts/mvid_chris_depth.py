@@ -153,21 +153,20 @@ while 1:
                 new_img[y2:,:] = 0
                 new_img[:,:x1] = 0
                 new_img[:,x2:] = 0
-                print("sliced rgb")
-                xd1 = x1/4
-                xd2 = x2/4
-                yd1 = y1/4
-                yd2 = y2/4
-                new_img_depth = depth
-                new_img_depth[:y1,:] = 0
-                new_img_depth[y2:,:] = 0
-                new_img_depth[:,:x1] = 0
-                new_img_depth[:,x2:] = 0
-                print("Finished slicing depth image")
+                # print("sliced rgb")
+                # xd1 = x1/4
+                # xd2 = x2/4
+                # yd1 = y1/4
+                # yd2 = y2/4
+                # new_img_depth = depth
+                # new_img_depth[:y1,:] = 0
+                # new_img_depth[y2:,:] = 0
+                # new_img_depth[:,:x1] = 0
+                # new_img_depth[:,x2:] = 0
+                # print("Finished slicing depth image")
             except Exception as e:
                 print("Exception: ", e)
-            cv2.imshow("masked_depth", cv2.resize(new_img, (int(800), int(600))))
-            cv2.imshow("depth", new_img_depth)
+            cv2.imshow("new_img", cv2.resize(new_img, (int(800), int(600))))
  
     # #rectangular border (improved edge detection + closed contours)___________________________ 
             cv2.rectangle(dst,(0,0),(1920,1080),(40,100,0),2)
@@ -190,7 +189,7 @@ while 1:
         #     np.savetxt(f,depth_vision)
         ##depth vision is a 1x512 boolean list. need to identify which is best place to go
         
-        target_index = get_longest_false_run(depth_vision)
+        target_index = int(get_longest_false_run(depth_vision))
 
 
         with open("/home/josh/Documents/share.json","w") as f:
@@ -201,7 +200,8 @@ while 1:
         print("target index: ", target_index)
         target_offset = (target_index - 256)/ ppm
         print("Target offset: ", target_offset)
-
+        depth[250:300,target_index-1:target_index+1] = 32168
+        cv2.imshow("depth", depth)
 
         # cv2.imshow('Video', dst)
 

@@ -171,7 +171,7 @@ while 1:
         print("target index: ", target_index)
         target_offset = target_index - 256 * ppm
         print("Target offset: ", target_offset)
-
+        dst[250:300,target_index-1:target_index+1] = 32168
 
         cv2.imshow('Video', dst)
 
