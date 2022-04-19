@@ -37,15 +37,11 @@ def pretty_depth(depth):
 
 def longest_false_run(lst):
     """Finds the longest false run in a list of boolean"""
-
     # find False runs only
     groups = [[i for i, _ in group] for key, group in groupby(enumerate(lst), key=itemgetter(1)) if not key]
-
     # get the one of maximum length
     group = max(groups, key=len, default=[-1, -1])
-
     start, end = group[0], group[-1]
-
     return start, end
 
     
@@ -55,21 +51,21 @@ def get_arc_and_ppm(range_of_concern):
     ## Pixels per meter (ppm) = 512/arc length in meters
     ppm = 512 / range_arc_length
     ## ppm * .82 = chair number of pixels necessary for space
-    chair_pixels = .74 * ppm
+    chair_pixels = .4 * ppm
     return range_arc_length, ppm, chair_pixels
 
 
 def get_boolean_with_np(arr):
     with open("/home/josh/Documents/arr.csv","w") as f:
         np.savetxt(f,arr, fmt="%d", delimiter=',')
-    return list(np.sum((arr[120:180,0:-1] < range_of_concern),axis=0, dtype=bool))
+    return list(np.sum(arr[120:180,0:-1] < int(range_of_concern*1000),axis=0, dtype=bool))
 
 def get_closest(depthData):
     global range_of_concern
-    maskedDepth = np.ma.masked_equal(depthData, 0, copy=False)
+    depthData[depthData == 0] = 8008
     distance = 4000
     while distance > 1000:
-        ret,objectMask = cv2.threshold(maskedDepth, distance, 1, cv2.THRESH_BINARY_INV)
+        ret,objectMask = cv2.threshold(depthData, distance, 1, cv2.THRESH_BINARY_INV)
         pixelCount = round(np.average(objectMask))
         if pixelCount < 1:
             print("breaking")
