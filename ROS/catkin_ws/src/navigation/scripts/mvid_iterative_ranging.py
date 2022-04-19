@@ -66,9 +66,10 @@ def get_boolean_with_np(arr):
 
 def get_closest(depthData):
     global range_of_concern
+    maskedDepth = np.ma.masked_equal(depthData, 0, copy=False)
     distance = 4000
     while distance > 1000:
-        ret,objectMask = cv2.threshold(depthData > 0, distance, 1, cv2.THRESH_BINARY_INV)
+        ret,objectMask = cv2.threshold(maskedDepth, distance, 1, cv2.THRESH_BINARY_INV)
         pixelCount = round(np.average(objectMask))
         if pixelCount < 1:
             print("breaking")
