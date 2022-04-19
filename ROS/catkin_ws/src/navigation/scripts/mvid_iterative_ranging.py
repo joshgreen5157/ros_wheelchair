@@ -177,6 +177,7 @@ while 1:
         ##depth vision is a 1x512 boolean list. need to identify which is best place to go
         
         start, end = longest_false_run(depth_vision)
+        print(start, end)
         
         with open("/home/josh/Documents/depth_vision.csv","w") as f:
             np.savetxt(f,depth_vision, fmt="%d", delimiter=",")
@@ -197,9 +198,9 @@ while 1:
         target_offset = (target_index - 256)/ ppm
         print("Target offset: ", target_offset)
         if target_index > 0:
-            # new_depth_img[250:300, start-1::start+1] = 32168
+            new_depth_img[135:215, start-1:start+1] = 32168
             new_depth_img[150:200,target_index-1:target_index+1] = 32168
-            # new_depth_img[250:300, end-1::end+1] = 32168
+            new_depth_img[135:215, end-1:end+1] = 32168
 
         cv2.imshow("new_depth_image", new_depth_img)
         # cv2.line(new_depth_img, (target_index, 250), (target_index, 300),color=(255,255,255), thickness=6)
