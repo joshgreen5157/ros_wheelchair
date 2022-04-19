@@ -213,5 +213,9 @@ while 1:
             break
 
     # time.sleep(2)
-        
+
+with open("/home/josh/Documents/share.json","w") as f:
+        kinect_dict["target"] = 256
+        kinect_dict["range"] = 0
+        json.dump(kinect_dict, f)
 device.stop()
