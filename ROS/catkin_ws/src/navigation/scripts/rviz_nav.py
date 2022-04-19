@@ -30,6 +30,8 @@ serialCounter = 0
 cancelBool = False
 obs_range = 0
 target_index = 256
+lastLeftMotor = 0
+lastRightMotor = 0
 
 # Clear the map on rViz (NOT CURRENTLY IN USE, IF USED ALLOW TIME FOR MAP TO REPOPULATE)
 def clearMap():
@@ -57,16 +59,17 @@ def translateCommands(target):
     global COM
     x = float(target.linear.x)     ## linear.x range (0.0 to 0.5)
     theta = float(target.angular.z)    ## angular.z range (-1.0 to 1.0)
-    speed = 200*x ##0.1 = 20, 0.2 = 40, 0.3 = 60, 0.4 = 80, 0.5 = 100
-    ## Assume positive theta = left turn, Negative theta is right turn
-    
-    
+    if x > 0:
+        speed = 100
+    if x < 0:
+        speed = -50
+       
     #ROS MOTOR VALUES
     if theta < 0:
         leftMotor = speed
-        rightMotor = speed - theta*50
+        rightMotor = speed - theta*33
     elif theta > 0:
-        leftMotor = speed - theta*50
+        leftMotor = speed - theta*33
         rightMotor = speed
     else:
         leftMotor = speed
@@ -76,17 +79,30 @@ def translateCommands(target):
     if obs_range == 0 or kinect_index == 256:
         kinect_turn_percentage = 0
     else:
-        speed = speed / obs_range
+        speed = speed * obs_range/2 #do nothing unless object is within 2 meters
         #256 = do nothing so subtract 256 and then eval
         kinect_index = 256 - target_index
         kinect_turn_percentage = kinect_index / 256
 
-
     leftMotor = leftMotor + (speed*kinect_turn_percentage)
     rightMotor = rightMotor - (speed*kinect_turn_percentage)    
     
+    for motor in leftMotor, rightMotor:
+        if motor > 100:
+            motor = 100
+        if motor < -100:
+            motor = -100
+    
+    if abs(leftMotor - lastLeftMotor) > 50:
+        leftMotor = lastLeftMotor + leftMotor / 2
+    
+    if abs(rightMotor - lastRightMotor) > 50:
+        rightMotor = lastRightMotor + rightMotor / 2
 
-    writeCommand(COM, "%" + leftMotor + "&" + rightMotor)
+    lastLeftMotor = leftMotor
+    lastRightMotor = rightMotor
+
+    writeCommand(COM, "%" + rightMotor + "&" + -leftMotor)
 
 # Format the desired command and send it over the open COM port
 def writeCommand(comPort, strvar):
@@ -140,11 +156,12 @@ def checkCamera(pose):
 # Send Stop command to wheelchair
 def stopWheelchair():
     global COM
+    lastLeftMotor = 0
+    lastRightMotor = 0
     writeCommand(COM, "%0&0")
 
 # Looping listener for ROS Topics
 def listener():
-    global freeze
     rospy.init_node('listener',anonymous=True)
     rospy.Subscriber('/pose2D', Pose2D, checkCamera)
     rospy.Subscriber('/move_base_simple/goal', PoseStamped, newGoalReceived)
