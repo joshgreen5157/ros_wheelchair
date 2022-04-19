@@ -68,7 +68,7 @@ def get_closest(depthData):
     global range_of_concern
     distance = 4000
     while distance > 1000:
-        ret,objectMask = cv2.threshold(depthData, distance, 1, cv2.THRESH_BINARY_INV)
+        ret,objectMask = cv2.threshold(depthData > 0, distance, 1, cv2.THRESH_BINARY_INV)
         pixelCount = round(np.average(objectMask))
         if pixelCount < 1:
             print("breaking")
