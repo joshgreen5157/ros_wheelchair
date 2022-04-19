@@ -55,14 +55,14 @@ def get_arc_and_ppm(range_of_concern):
     ## Pixels per meter (ppm) = 512/arc length in meters
     ppm = 512 / range_arc_length
     ## ppm * .82 = chair number of pixels necessary for space
-    chair_pixels = .82 * ppm
+    chair_pixels = .74 * ppm
     return range_arc_length, ppm, chair_pixels
 
 
 def get_boolean_with_np(arr):
     with open("/home/josh/Documents/arr.csv","w") as f:
-        np.savetxt(f,arr)
-    return list(np.sum((arr[150:200,0:-1] < range_of_concern),axis=0, dtype=bool))
+        np.savetxt(f,arr, fmt="%d", delimter=',')
+    return list(np.sum((arr[120:180,0:-1] < range_of_concern),axis=0, dtype=bool))
 
 def get_closest(depthData):
     global range_of_concern
@@ -76,7 +76,7 @@ def get_closest(depthData):
         distance = distance - 400
     # print("Done with image")
     with open("/home/josh/Documents/objectMask.csv","w") as f:
-        np.savetxt(f,objectMask)
+        np.savetxt(f,objectMask, fmt="%d", delimter=','))
     print("Distance at finish: ", distance)
     range_of_concern = distance*0.001
     
