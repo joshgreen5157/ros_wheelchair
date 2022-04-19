@@ -61,7 +61,7 @@ def get_arc_and_ppm(range_of_concern):
 
 def get_boolean_with_np(arr):
     with open("/home/josh/Documents/arr.csv","w") as f:
-        np.savetxt(f,arr, fmt="%d", delimter=',')
+        np.savetxt(f,arr, fmt="%d", delimiter=',')
     return list(np.sum((arr[120:180,0:-1] < range_of_concern),axis=0, dtype=bool))
 
 def get_closest(depthData):
@@ -76,7 +76,7 @@ def get_closest(depthData):
         distance = distance - 400
     # print("Done with image")
     with open("/home/josh/Documents/objectMask.csv","w") as f:
-        np.savetxt(f,objectMask, fmt="%d", delimter=','))
+        np.savetxt(f,objectMask, fmt="%d", delimiter=',')
     print("Distance at finish: ", distance)
     range_of_concern = distance*0.001
     
