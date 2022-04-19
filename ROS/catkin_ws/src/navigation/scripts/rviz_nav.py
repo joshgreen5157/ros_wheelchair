@@ -57,6 +57,8 @@ def setGoal(msg):
 # Translate the desired command and assign it the proper numeric value
 def translateCommands(target):
     global COM
+    global lastLeftMotor
+    global lastRightMotor
     x = float(target.linear.x)     ## linear.x range (0.0 to 0.5)
     theta = float(target.angular.z)    ## angular.z range (-1.0 to 1.0)
     if x > 0:
@@ -102,7 +104,7 @@ def translateCommands(target):
     lastLeftMotor = leftMotor
     lastRightMotor = rightMotor
 
-    writeCommand(COM, "%" + rightMotor + "&" + -leftMotor)
+    writeCommand(COM, "%" + str(rightMotor) + "&" + str(-leftMotor))
 
 # Format the desired command and send it over the open COM port
 def writeCommand(comPort, strvar):
@@ -156,6 +158,8 @@ def checkCamera(pose):
 # Send Stop command to wheelchair
 def stopWheelchair():
     global COM
+    global lastLeftMotor
+    global lastRightMotor
     lastLeftMotor = 0
     lastRightMotor = 0
     writeCommand(COM, "%0&0")
