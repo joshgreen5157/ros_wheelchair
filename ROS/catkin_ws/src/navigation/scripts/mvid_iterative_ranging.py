@@ -60,9 +60,12 @@ def get_boolean_with_np(arr):
         np.savetxt(f,arr, fmt="%d", delimiter=',')
     return list(np.sum(arr[120:180,0:-1] < int(range_of_concern*1000),axis=0, dtype=bool))
 
+def get_boolean_with_np_mask(arr):
+    return list(np.sum(arr[120:180,0:-1]),axis=0, dtype=bool)
+
 def get_closest(depthData):
     global range_of_concern
-    depthData[depthData == 0] = 8008
+    depthData[depthData == 0] = 8010
     distance = 4000
     while distance > 1000:
         ret,objectMask = cv2.threshold(depthData, distance, 1, cv2.THRESH_BINARY_INV)
@@ -76,6 +79,7 @@ def get_closest(depthData):
         np.savetxt(f,objectMask, fmt="%d", delimiter=',')
     print("Distance at finish: ", distance)
     range_of_concern = distance*0.001
+    return objectMask
     
 
 signal.signal(signal.SIGINT, sigint_handler)
@@ -151,7 +155,7 @@ while 1:
             new_depth_img = np.fliplr(depth)
             with open("/home/josh/Documents/new_depth_image.csv","w") as f:
                 np.savetxt(f,new_depth_img, fmt="%d", delimiter=",")
-            get_closest(new_depth_img)
+            depthMask = get_closest(new_depth_img)
 
             cv2.imshow("color image", cv2.resize(color.asarray(), (int(800), int(600))))
     # #rectangular border (improved edge detection + closed contours)___________________________ 
@@ -170,11 +174,16 @@ while 1:
         range_arc_length, ppm, chair_pixels = get_arc_and_ppm(range_of_concern)
 
         depth_vision = get_boolean_with_np(new_depth_img)
+        testMask = get_boolean_with_np_mask(depthMask)
+
         # print(depth_vision)
         ##depth vision is a 1x512 boolean list. need to identify which is best place to go
         
         start, end = longest_false_run(depth_vision)
         print(start, end)
+
+        with open("/home/josh/Documents/depth_from_mask.csv","w") as f:
+                np.savetxt(f,testMask, fmt="%d", delimiter=",")
         
         with open("/home/josh/Documents/depth_vision.csv","w") as f:
             np.savetxt(f,depth_vision, fmt="%d", delimiter=",")
