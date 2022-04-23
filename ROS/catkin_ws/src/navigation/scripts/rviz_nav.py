@@ -155,10 +155,15 @@ def targetReached(status):
             cancelBool = False
 
 # Check the camera output for Wheelchair Freeze command
+cameraCount = 0
 def checkCamera(pose):
     global COM
     global target_index
-    global obs_range 
+    global obs_range
+    global cameraCount
+    if cameraCount < 4:
+        cameraCount += 1
+        return
     print("Check Camera")
     with open("/home/max/shared.json", "r") as fp:
         kinect_dict = json.load(fp)
@@ -167,6 +172,7 @@ def checkCamera(pose):
     if target_index == -1:
         print("No viable space")
         stopWheelchair()
+    cameraCount = 0
         
 
 # Send Stop command to wheelchair

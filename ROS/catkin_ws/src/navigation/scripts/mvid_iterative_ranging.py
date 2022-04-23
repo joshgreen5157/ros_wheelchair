@@ -122,9 +122,13 @@ net.setInputMean((127.5,127.5,127.5))
 net.setInputSwapRB(True)
 kinect_dict = {"target" : 256, "range_of_concern" : 0}
 range_of_concern = 1
-
+framesCounter = 0
 while 1:
     if listener.hasNewFrame():
+        if framesCounter < 10:
+            framesCounter +=1
+            continue
+        framesCounter = 0
         frames = listener.waitForNewFrame()
         color = frames["color"]
         ir = frames["ir"]
