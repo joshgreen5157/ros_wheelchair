@@ -54,46 +54,56 @@ def setGoal(msg):
     goal_publisher.publish(goal)    
     time.sleep(2)  
 
+def limitMotor(motor):
+    max = 50
+    min = -max
+    if motor > max:
+        motor = max
+    elif motor < min:
+        motor = min
+    else:
+        motor = motor
+    return motor
+
 # Translate the desired command and assign it the proper numeric value
 def translateCommands(target):
     global COM
     global lastLeftMotor
     global lastRightMotor
+    global target_index
+    global obs_range
     x = float(target.linear.x)     ## linear.x range (0.0 to 0.5)
     theta = float(target.angular.z)    ## angular.z range (-1.0 to 1.0)
     if x > 0:
-        speed = 100
+        speed = 50
     if x < 0:
-        speed = -50
+        speed = -25
        
     #ROS MOTOR VALUES
     if theta < 0:
         leftMotor = speed
-        rightMotor = speed - theta*33
+        rightMotor = speed - theta*17
     elif theta > 0:
-        leftMotor = speed - theta*33
+        leftMotor = speed - theta*17
         rightMotor = speed
     else:
         leftMotor = speed
         rightMotor = speed
 
     ## kinect differential
-    if obs_range == 0 or kinect_index == 256:
+    if obs_range == 0 or target_index == 256:
         kinect_turn_percentage = 0
     else:
         speed = speed * obs_range/2 #do nothing unless object is within 2 meters
         #256 = do nothing so subtract 256 and then eval
         kinect_index = 256 - target_index
-        kinect_turn_percentage = kinect_index / 256
+        kinect_turn_percentage = kinect_index / 750
 
     leftMotor = leftMotor + (speed*kinect_turn_percentage)
-    rightMotor = rightMotor - (speed*kinect_turn_percentage)    
-    
-    for motor in leftMotor, rightMotor:
-        if motor > 100:
-            motor = 100
-        if motor < -100:
-            motor = -100
+    rightMotor = rightMotor - (speed*kinect_turn_percentage)  
+
+    leftMotor = limitMotor(leftMotor)
+    rightMotor = limitMotor(rightMotor)  
     
     if abs(leftMotor - lastLeftMotor) > 50:
         leftMotor = lastLeftMotor + leftMotor / 2
@@ -101,10 +111,13 @@ def translateCommands(target):
     if abs(rightMotor - lastRightMotor) > 50:
         rightMotor = lastRightMotor + rightMotor / 2
 
+    leftMotor = limitMotor(leftMotor)
+    rightMotor = limitMotor(rightMotor)
+
     lastLeftMotor = leftMotor
     lastRightMotor = rightMotor
 
-    writeCommand(COM, "%" + str(rightMotor) + "&" + str(-leftMotor))
+    writeCommand(COM, "%" + str(int(rightMotor)) + "&" + str(int(-leftMotor)))
 
 # Format the desired command and send it over the open COM port
 def writeCommand(comPort, strvar):
@@ -113,8 +126,8 @@ def writeCommand(comPort, strvar):
 # Translate and send velocity commands received from rViz, flush serial line every 25 messages sent to prevent overloading
 def navCommandsReceived(poses):
     global COM
-    global freeze
     global serialCounter
+    print("Nav Command Received")
     if target_index != -1:
         translateCommands(poses)
         if serialCounter == 25:
@@ -146,6 +159,7 @@ def checkCamera(pose):
     global COM
     global target_index
     global obs_range 
+    print("Check Camera")
     with open("/home/max/shared.json", "r") as fp:
         kinect_dict = json.load(fp)
         target_index = kinect_dict["target"]
