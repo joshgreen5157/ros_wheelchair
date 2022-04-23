@@ -115,7 +115,7 @@ def navCommandsReceived(poses):
     global COM
     global freeze
     global serialCounter
-    if freeze != -1:
+    if target_index != -1:
         translateCommands(poses)
         if serialCounter == 25:
             COM.flushInput()
@@ -175,8 +175,8 @@ def listener():
   
 # Launch ROS and rVIZ, start listener process
 def main():
-    p = mp.Process(target=ROSProcess)
-    p.start()
+    # p = mp.Process(target=ROSProcess)
+    # p.start()
     time.sleep(10)
 
     l = mp.Process(target=listener)
@@ -185,7 +185,7 @@ def main():
     # sp.run('mark3.py', shell = True, check = True, stdout = sp.PIPE, stderr = sp.STDOUT)
     time.sleep(5)
     print('Ready for target location')
-    p.join()
+    # p.join()
     l.join()
 
 if __name__ == '__main__':
