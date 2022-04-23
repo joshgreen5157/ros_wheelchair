@@ -141,7 +141,7 @@ void readJoystick() {
     int leftPower = (yValue + xValue/motorReduction)/2; 
     int rightPower = (yValue - xValue/ motorReduction)/2;
     //    Serial.println((String)"Left motor: " + leftPower + " || Right motor: " + rightPower);
-    writeMotors(-1*leftPower, -1*rightPower);
+    writeMotors(leftPower, rightPower);
   }
 };
 
@@ -185,6 +185,9 @@ void serialRead() {
   }
   else if (autonomousModeBool) {
     if (millis() - autoTimer > autonomousTimeOut) {
+      while (Serial.available() > 0) {
+        Serial.read();
+      }
       autonomousModeBool = false;
     }
   }
