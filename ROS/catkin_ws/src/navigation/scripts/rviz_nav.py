@@ -165,7 +165,7 @@ def checkCamera(pose):
         cameraCount += 1
         return
     print("Check Camera")
-    with open("/home/max/shared.json", "r") as fp:
+    with open("/home/max/Documents/share.json", "r") as fp:
         kinect_dict = json.load(fp)
         target_index = kinect_dict["target"]
         obs_range = kinect_dict["range"]
