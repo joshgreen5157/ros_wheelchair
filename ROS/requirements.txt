@@ -1,0 +1,8 @@
+matplotlib
+numpy
+scipy
+seaborn
+pandas
+bokeh
+rosbag_pandas
+serial
