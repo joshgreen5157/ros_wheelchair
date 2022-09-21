@@ -2,10 +2,11 @@
 
 //Pins
 const int ENA = 8; //Define enable pin for Megamoto 1
-const int LMF = 9; //Define pin for Left Motor Forward
-const int LMR = 10; //Define pin for Left Motor Reverse
-const int RMF = 5; //Define pin for Right Motor Forward
-const int RMR = 6; //Define pin for Right Motor Reverse
+const int LMF = 6; //Define pin for Left Motor Forward
+const int LMR = 5; //Define pin for Left Motor Reverse
+const int RMF = 10; //Define pin for Right Motor Forward
+const int RMR = 9; //Define pin for Right Motor Reverse
+
 const int JOYX = A0; const int JOYY = A1; //analog 0 and analog 1
 const int BRAKED = 4; //brake Input
 
@@ -57,8 +58,6 @@ void calibrateJoystick() {
   unsigned int yAvg = yTot / calibrationlevel;
   int x = xAvg;
   int y = yAvg;
-  Serial.print(x);
-  Serial.print(y);
   //magic numbers, need to make tied to something
   if (xAvg < 475 || xAvg > 575) {
     xAvg = 525;
@@ -116,6 +115,7 @@ void motorRight(int speed) {
 
 void writeMotors(int left, int right) {
   digitalWrite(ENA, HIGH);
+  Serial.println(left, right);
   motorLeft(left);
   motorRight(right);
 }
@@ -140,7 +140,7 @@ void readJoystick() {
     //     Serial.println((String)"XXXXXX: " + xValue + " || YYYYYY " + yValue);
     int leftPower = (yValue + xValue/motorReduction)/2; 
     int rightPower = (yValue - xValue/ motorReduction)/2;
-    //    Serial.println((String)"Left motor: " + leftPower + " || Right motor: " + rightPower);
+    Serial.println((String)"Left motor: " + leftPower + " || Right motor: " + rightPower);
     writeMotors(leftPower, rightPower);
   }
 };
@@ -185,9 +185,9 @@ void serialRead() {
   }
   else if (autonomousModeBool) {
     if (millis() - autoTimer > autonomousTimeOut) {
-      while (Serial.available() > 0) {
-        Serial.read();
-      }
+//      while (Serial.available() > 0) {
+//        Serial.read();
+//      }
       autonomousModeBool = false;
     }
   }
